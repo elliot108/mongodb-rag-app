@@ -1,11 +1,12 @@
 import { StreamingTextResponse, LangChainStream, Message } from 'ai';
-import { ChatOpenAI } from 'langchain/chat_models/openai';
+// import { ChatDeepSeek } from '@langchain/community/chat_models/deepseek';
+import { ChatOpenAI } from 'langchain/chat_models/openai'; // Commented out OpenAI import
 
 import { ConversationalRetrievalQAChain } from 'langchain/chains';
-import { vectorStore } from '@/utils/openai';
+// import { vectorStore } from '@/utils/openai'; // Commented out OpenAI vectorStore import
+import { vectorStore } from '@/utils/bgeEmbedding'; // Using DeepSeek vectorStore
 import { NextResponse } from 'next/server';
 import { BufferMemory } from "langchain/memory";
-
 
 export async function POST(req: Request) {
     try {
@@ -14,24 +15,37 @@ export async function POST(req: Request) {
         const messages: Message[] = body.messages ?? [];
         const question = messages[messages.length - 1].content;
 
+        // OpenAI model (commented out)
+        /*
         const model = new ChatOpenAI({
             temperature: 0.8,
             streaming: true,
             callbacks: [handlers],
         });
+        */
+        // DeepSeek model
+        const model = new ChatOpenAI({
+            modelName: "deepseek-chat",
+            temperature: 0.8,
+            streaming: true,
+            callbacks: [handlers],
+        });
 
-        const retriever = vectorStore().asRetriever({ 
+        const store = await vectorStore();
+        const retriever = store.asRetriever({ 
             "searchType": "mmr", 
             "searchKwargs": { "fetchK": 10, "lambda": 0.25 } 
-        })
+        });
+
         const conversationChain = ConversationalRetrievalQAChain.fromLLM(model, retriever, {
             memory: new BufferMemory({
-              memoryKey: "chat_history",
+                memoryKey: "chat_history",
             }),
-          })
-        conversationChain.invoke({
-            "question": question
-        })
+        });
+
+        await conversationChain.invoke({
+            "question": question,
+        });
 
         return new StreamingTextResponse(stream);
     }

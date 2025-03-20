@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { promises as fs } from 'fs';
 import pdf from "pdf-parse";
 
-import { getEmbeddingsTransformer, searchArgs } from '@/utils/openai';
+import { getEmbeddingsTransformer, searchArgs } from '@/utils/bgeEmbedding';
 import { MongoDBAtlasVectorSearch } from '@langchain/community/vectorstores/mongodb_atlas';
 import { CharacterTextSplitter } from 'langchain/text_splitter';
 
@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
         const tempFilePath = `/tmp/${fileName}.pdf`;
         const fileBuffer = Buffer.from(await uploadedFile.arrayBuffer());
 
-        await fs.writeFile(tempFilePath, fileBuffer);
+        await fs.writeFile(tempFilePath, new Uint8Array(fileBuffer));
         let dataBuffer = fs.readFile(tempFilePath);
 
         await pdf(await dataBuffer).then(async function (data: { text: any; }) {
